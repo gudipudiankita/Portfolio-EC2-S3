@@ -2,20 +2,22 @@ name: Terraform S3 Portfolio CI-CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
   workflow_dispatch:
     inputs:
       operation:
-        description: "Choose Terraform operation"
+        description: "Select Terraform operation"
         required: true
         type: choice
         options:
           - apply
           - destroy
         default: apply
+
       confirm_destroy:
-        description: "Enter DESTROY to confirm"
+        description: "Enter DESTROY to confirm deletion"
         required: false
         type: string
         default: ""
@@ -23,30 +25,80 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: portfolio-terraform
+  cancel-in-progress: false
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
 
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
-      TF_IN_AUTOMATION: true
+      TF_IN_AUTOMATION: "true"
 
     steps:
-      # 1. Check out the repository containing Terraform code
+      # 1. Checkout the Terraform repository
       - name: Checkout Terraform repository
         uses: actions/checkout@v4
         with:
           path: terraform-code
 
-      # 2. Check out the portfolio repository
+      # 2. Checkout the portfolio source repository
       - name: Checkout portfolio repository
         uses: actions/checkout@v4
         with:
           repository: gudipudiankita/Portfolio-EC2-S3
           ref: main
-          path: terraform-code/portfolio
+          path: terraform-code/portfolio-source
+          token: ${{ secrets.PORTFOLIO_REPO_TOKEN || github.token }}
 
-      # 3. Configure AWS
+      # 3. Find and prepare the website files
+      - name: Prepare portfolio files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO="terraform-code/portfolio-source"
+          SITE="terraform-code/site"
+
+          mkdir -p "$SITE"
+
+          echo "Portfolio repository structure:"
+          find "$REPO" -maxdepth 5 -type f
+
+          INDEX_FILE="$(find "$REPO" -type f -name index.html -print -quit)"
+
+          if [ -z "$INDEX_FILE" ]; then
+            echo "ERROR: index.html was not found."
+            exit 1
+          fi
+
+          echo "Using HTML file: $INDEX_FILE"
+
+          # Copy all files from the directory containing index.html.
+          PORTFOLIO_DIR="$(dirname "$INDEX_FILE")"
+          cp -a "$PORTFOLIO_DIR/." "$SITE/"
+
+          # Locate the profile image if it wasn't copied with the HTML.
+          if [ ! -f "$SITE/ankita.png" ]; then
+            IMAGE_FILE="$(find "$REPO" -type f -name ankita.png -print -quit)"
+
+            if [ -z "$IMAGE_FILE" ]; then
+              echo "ERROR: ankita.png was not found."
+              exit 1
+            fi
+
+            cp "$IMAGE_FILE" "$SITE/ankita.png"
+          fi
+
+          echo "Prepared website files:"
+          find "$SITE" -maxdepth 5 -type f
+
+          test -f "$SITE/index.html"
+          test -f "$SITE/ankita.png"
+
+      # 4. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -54,54 +106,61 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 4. Install Terraform
+      # 5. Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.10.5"
 
-      # 5. Verify files exist before Terraform validation
-      - name: Check portfolio files
-        working-directory: terraform-code
-        run: |
-          ls -l portfolio/index.html
-          ls -l portfolio/ankita.png
-
-      # 6. Terraform commands
+      # 6. Initialize remote backend
       - name: Terraform Init
         working-directory: terraform-code
         run: terraform init -input=false
 
+      # 7. Validate configuration
       - name: Terraform Validate
         working-directory: terraform-code
         run: terraform validate
 
+      # 8. Plan changes on push or manual apply
       - name: Terraform Plan
         if: github.event_name == 'push' || inputs.operation == 'apply'
         working-directory: terraform-code
         run: terraform plan -input=false -out=tfplan
 
+      # 9. Apply automatically
       - name: Terraform Apply
         if: github.event_name == 'push' || inputs.operation == 'apply'
         working-directory: terraform-code
         run: terraform apply -input=false -auto-approve tfplan
 
-      - name: Display Outputs
+      # 10. Show outputs
+      - name: Display deployment outputs
         if: github.event_name == 'push' || inputs.operation == 'apply'
         working-directory: terraform-code
+        shell: bash
         run: |
-          echo "## Portfolio Deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "Bucket ARN: $(terraform output -raw portfolio_bucket_arn)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Image URL: $(terraform output -raw portfolio_image_url)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Website URL: $(terraform output -raw portfolio_s3_website_url)" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Portfolio Deployment"
+            echo ""
+            echo "**Bucket ARN:**"
+            terraform output -raw portfolio_bucket_arn
+            echo ""
+            echo "**Profile Image URL:**"
+            terraform output -raw portfolio_image_url
+            echo ""
+            echo "**Website URL:**"
+            terraform output -raw portfolio_s3_website_url
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      # 7. Require confirmation for destroy
-      - name: Check Destroy Confirmation
+      # 11. Require confirmation before destroy
+      - name: Check destroy confirmation
         if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy' && inputs.confirm_destroy != 'DESTROY'
         run: |
-          echo "Destroy cancelled: enter DESTROY to confirm."
+          echo "Destroy cancelled. Enter DESTROY to confirm."
           exit 1
 
+      # 12. Destroy only after manual confirmation
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy' && inputs.confirm_destroy == 'DESTROY'
         working-directory: terraform-code
