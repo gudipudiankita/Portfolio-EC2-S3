@@ -58,7 +58,7 @@ resource "aws_s3_bucket_policy" "portfolio" {
 
 # 5. Construct the public profile image URL
 locals {
-  portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.${var.aws_region}.amazonaws.com/ankita.png"
+  portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.${var.AWS_REGION}.amazonaws.com/ankita.png"
 
   # Read the HTML prepared by the GitHub Actions workflow.
   # Replace the local image filename with the S3 image URL.
