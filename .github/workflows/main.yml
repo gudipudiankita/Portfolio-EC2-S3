@@ -42,7 +42,7 @@ jobs:
       - name: Checkout portfolio repository
         uses: actions/checkout@v4
         with:
-          repository: https://github.com/gudipudiankita/Portfolio-EC2-S3/tree/main/portfolio
+          repository: gudipudiankita/Portfolio-EC2-S3
           ref: main
           path: terraform-code/portfolio
 
