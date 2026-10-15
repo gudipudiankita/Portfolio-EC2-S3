@@ -1,15 +1,11 @@
-
-resource "aws_instance" "portfolio" {
-  # Keep your existing EC2 and VPC settings here.
-  ami                    ="ami-006f82a1d5a27da54"
-  instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.mysubnet.id
-  vpc_security_group_ids = [aws_security_group.portfolio.id]
-
-
-  # Keep your existing public IP setting if needed.
+resource "aws_instance" "example" {
+  ami           = "ami-006f82a1d5a27da54"
+  instance_type = "t3.micro"
   associate_public_ip_address = true
-
+  subnet_id = aws_subnet.mysubnet.id
+  security_groups = [aws_default_security_group.default.id]
+ 
+ 
   # Send the HTML with the S3 URL to EC2
   user_data = <<-EOF
     #!/bin/bash
