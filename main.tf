@@ -103,8 +103,3 @@ output "portfolio_s3_website_url" {
 
 
 
-# 10. Display image URL
-output "portfolio_image_url" {
-  value = local.portfolio_image_url
-}
-
