@@ -27,3 +27,13 @@ resource "aws_subnet" "mysubnet2" {
       Name=var.subnet2-name
     }
 }
+
+
+terraform {
+  backend "s3" {
+    bucket       = "jgfb09474t"
+    key          = "portfolio/terraform.tfstate"
+    region       = "ap-south-1"
+  
+  }
+}
