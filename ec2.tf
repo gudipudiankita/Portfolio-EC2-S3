@@ -1,48 +1,41 @@
-resource "aws_instance" "example" {
-  ami           = "ami-006f82a1d5a27da54"
-  instance_type = "t3.micro"
+
+resource "aws_instance" "portfolio" {
+  # Keep your existing EC2 and VPC settings here.
+  ami                    ="ami-006f82a1d5a27da54"
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.mysubnet.id
+  vpc_security_group_ids = [aws_security_group.portfolio.id]
+
+  # Keep your existing public IP setting if needed.
   associate_public_ip_address = true
-  subnet_id = aws_subnet.mysubnet.id
-  security_groups = [aws_default_security_group.default.id]
-  key_name = "portokey"
+
+  # Send the HTML with the S3 URL to EC2
+  user_data = <<-EOF
+    #!/bin/bash
+    set -eux
+
+    apt-get update
+    apt-get install -y nginx
+
+    mkdir -p /var/www/html
+
+    cat > /var/www/html/index.html <<'HTML_EOF'
+    ${local.updated_html}
+    HTML_EOF
+
+    chown www-data:www-data /var/www/html/index.html
+    chmod 644 /var/www/html/index.html
+
+    systemctl enable nginx
+    systemctl restart nginx
+  EOF
+
+  depends_on = [
+    aws_s3_object.image
+  ]
 
   tags = {
-    Name = "portfolio-EC21"
+    Name = "Portfolio-EC2-Nginx"
   }
-
-
-connection {
-  type        = "ssh"
-  user        = "ubuntu"
-  private_key = file("${path.module}/portokey.pem")
-  host        = self.public_ip
-  timeout     = "5m"
 }
 
-# Upload local website files to the Ubuntu home directory
-provisioner "file" {
-  source      = "${path.module}/index.html"
-  destination = "/home/ubuntu/index.html"
-}
-
-provisioner "file" {
-  source      = "${path.module}/ankita.png"
-  destination = "/home/ubuntu/ankita.png"
-}
-
-# Install Nginx and publish the website
-provisioner "remote-exec" {
-  inline = [
-    "sudo apt-get update -y",
-    "sudo apt-get install -y nginx",
-    "sudo cp /home/ubuntu/index.html /var/www/html/index.html",
-    "sudo cp /home/ubuntu/ankita.png /var/www/html/ankita.png",
-    "sudo chown -R www-data:www-data /var/www/html",
-    "sudo find /var/www/html -type d -exec chmod 755 {} \\;",
-    "sudo find /var/www/html -type f -exec chmod 644 {} \\;",
-    "sudo systemctl enable nginx",
-    "sudo systemctl restart nginx"
-  ]
-}
-
-}
