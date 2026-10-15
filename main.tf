@@ -54,13 +54,13 @@ resource "aws_s3_bucket_policy" "portfolio" {
   })
 }
 
-# 5. Upload profile image to S3
+# Upload the image from the checked-out portfolio repository
 resource "aws_s3_object" "image" {
   bucket = aws_s3_bucket.portfolio.id
   key    = "ankita.png"
 
-  source = "${path.module}/ankita.png"
-  etag   = filemd5("${path.module}/ankita.png")
+  source = "${path.module}/portfolio/ankita.png"
+  etag   = filemd5("${path.module}/portfolio/ankita.png")
 
   content_type = "image/png"
 
@@ -69,12 +69,12 @@ resource "aws_s3_object" "image" {
   ]
 }
 
-# 6. Generate the image URL and update index.html
+# Generate the S3 image URL and update the HTML
 locals {
   portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.ap-south-1.amazonaws.com/ankita.png"
 
   updated_html = replace(
-    file("${path.module}/index.html"),
+    file("${path.module}/portfolio/index.html"),
     "ankita.png",
     local.portfolio_image_url
   )
