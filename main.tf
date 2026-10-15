@@ -52,16 +52,20 @@ resource "aws_s3_bucket_policy" "portfolio" {
   })
 }
 
-# 6. Upload ankita.png
+# 5. Upload profile image
 resource "aws_s3_object" "image" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "ankita.png"
   source       = "${path.module}/ankita.png"
   etag         = filemd5("${path.module}/ankita.png")
   content_type = "image/png"
+
+  depends_on = [
+    aws_s3_bucket_policy.portfolio
+  ]
 }
 
-# 7. Generate the S3 image URL automatically
+# 6. Generate S3 image URL and update HTML
 locals {
   portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.ap-south-1.amazonaws.com/ankita.png"
 
@@ -72,7 +76,7 @@ locals {
   )
 }
 
-# 8. Upload updated index.html
+# 7. Upload updated HTML to S3
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "index.html"
@@ -84,12 +88,23 @@ resource "aws_s3_object" "index" {
   ]
 }
 
-# 9. Display website URL
-output "portfolio_website_url" {
+# 8. Outputs
+output "portfolio_bucket_arn" {
+  value = aws_s3_bucket.portfolio.arn
+}
+
+output "portfolio_image_url" {
+  value = local.portfolio_image_url
+}
+
+output "portfolio_s3_website_url" {
   value = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
 }
+
+
 
 # 10. Display image URL
 output "portfolio_image_url" {
   value = local.portfolio_image_url
 }
+
