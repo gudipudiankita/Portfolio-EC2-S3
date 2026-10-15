@@ -1,10 +1,14 @@
-
-# 1. Create S3 bucket
+# 1. Create the S3 bucket for the portfolio website
 resource "aws_s3_bucket" "portfolio" {
   bucket = "portn7494557"
+
+  tags = {
+    Name        = "AnkitaPortfolio"
+    Environment = "Production"
+  }
 }
 
-# 2. Enable public access settings
+# 2. Configure public access settings
 resource "aws_s3_bucket_public_access_block" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -27,7 +31,7 @@ resource "aws_s3_bucket_website_configuration" "portfolio" {
   }
 }
 
-# 4. Allow public reads of S3 objects
+# 4. Allow public access to website objects
 resource "aws_s3_bucket_policy" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -38,21 +42,26 @@ resource "aws_s3_bucket_policy" "portfolio" {
   policy = jsonencode({
     Version = "2012-10-17"
 
-    Statement = [{
-      Effect    = "Allow"
-      Principal = "*"
-      Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.portfolio.arn}/*"
-    }]
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.portfolio.arn}/*"
+      }
+    ]
   })
 }
 
-# 5. Upload profile image
+# 5. Upload profile image to S3
 resource "aws_s3_object" "image" {
-  bucket       = aws_s3_bucket.portfolio.id
-  key          = "ankita.png"
-  source       = "${path.module}/ankita.png"
-  etag         = filemd5("${path.module}/ankita.png")
+  bucket = aws_s3_bucket.portfolio.id
+  key    = "ankita.png"
+
+  source = "${path.module}/ankita.png"
+  etag   = filemd5("${path.module}/ankita.png")
+
   content_type = "image/png"
 
   depends_on = [
@@ -60,7 +69,7 @@ resource "aws_s3_object" "image" {
   ]
 }
 
-# 6. Generate image URL and update HTML
+# 6. Generate the image URL and update index.html
 locals {
   portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.ap-south-1.amazonaws.com/ankita.png"
 
@@ -71,10 +80,11 @@ locals {
   )
 }
 
-# 7. Upload updated HTML to S3
+# 7. Upload the updated HTML file
 resource "aws_s3_object" "index" {
-  bucket       = aws_s3_bucket.portfolio.id
-  key          = "index.html"
+  bucket = aws_s3_bucket.portfolio.id
+  key    = "index.html"
+
   content      = local.updated_html
   content_type = "text/html"
 
@@ -83,15 +93,20 @@ resource "aws_s3_object" "index" {
   ]
 }
 
-# 8. Outputs - define each output only once
+# 8. Output the bucket ARN
 output "portfolio_bucket_arn" {
-  value = aws_s3_bucket.portfolio.arn
+  description = "ARN of the portfolio S3 bucket"
+  value       = aws_s3_bucket.portfolio.arn
 }
 
+# 9. Output the profile image URL
 output "portfolio_image_url" {
-  value = local.portfolio_image_url
+  description = "Public URL of the profile image"
+  value       = local.portfolio_image_url
 }
 
+# 10. Output the static website URL
 output "portfolio_s3_website_url" {
-  value = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
+  description = "S3 static website endpoint"
+  value       = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
 }
