@@ -6,6 +6,7 @@ resource "aws_instance" "portfolio" {
   subnet_id              = aws_subnet.mysubnet.id
   vpc_security_group_ids = [aws_security_group.portfolio.id]
 
+
   # Keep your existing public IP setting if needed.
   associate_public_ip_address = true
 
