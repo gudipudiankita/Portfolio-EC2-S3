@@ -6,19 +6,19 @@ resource "aws_instance" "example" {
   security_groups = [aws_default_security_group.default.id]
  
  
-  # Send the HTML with the S3 URL to EC2
   user_data = <<-EOF
     #!/bin/bash
     set -eux
 
     apt-get update
-    apt-get install -y nginx
+    apt-get install -y nginx awscli
 
     mkdir -p /var/www/html
 
-    cat > /var/www/html/index.html <<'HTML_EOF'
-    ${local.updated_html}
-    HTML_EOF
+    aws s3 cp \
+      s3://${aws_s3_bucket.portfolio.bucket}/index.html \
+      /var/www/html/index.html \
+      --region ap-south-1
 
     chown www-data:www-data /var/www/html/index.html
     chmod 644 /var/www/html/index.html
@@ -28,6 +28,7 @@ resource "aws_instance" "example" {
   EOF
 
   depends_on = [
+    aws_s3_object.index,
     aws_s3_object.image
   ]
 
@@ -35,4 +36,3 @@ resource "aws_instance" "example" {
     Name = "Portfolio-EC2-Nginx"
   }
 }
-
