@@ -7,24 +7,23 @@ resource "aws_instance" "example" {
  
  
   user_data = <<-EOF
-    #!/bin/bash
-    set -eux
+  #!/bin/bash
+  set -eux
 
-    apt-get update
-    apt-get install -y nginx awscli
+  apt-get update
+  apt-get install -y nginx curl
 
-    mkdir -p /var/www/html
+  mkdir -p /var/www/html
 
-    aws s3 cp \
-      s3://${aws_s3_bucket.portfolio.bucket}/index.html \
-      /var/www/html/index.html \
-      --region ap-south-1
+  curl -fSL \
+    "https://${aws_s3_bucket.portfolio.bucket}.s3.ap-south-1.amazonaws.com/index.html" \
+    -o /var/www/html/index.html
 
-    chown www-data:www-data /var/www/html/index.html
-    chmod 644 /var/www/html/index.html
+  chown www-data:www-data /var/www/html/index.html
+  chmod 644 /var/www/html/index.html
 
-    systemctl enable nginx
-    systemctl restart nginx
+  systemctl enable nginx
+  systemctl restart nginx
   EOF
 
   depends_on = [
