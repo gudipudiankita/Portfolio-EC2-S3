@@ -4,7 +4,7 @@ resource "aws_s3_bucket" "portfolio" {
   bucket = "portn7494557"
 }
 
-# 2. Enable public website access
+# 2. Enable public access settings
 resource "aws_s3_bucket_public_access_block" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -14,12 +14,7 @@ resource "aws_s3_bucket_public_access_block" "portfolio" {
   restrict_public_buckets = false
 }
 
-# 3. Display S3 bucket ARN
-output "portfolio_bucket_arn" {
-  value = aws_s3_bucket.portfolio.arn
-}
-
-# 4. Enable static website hosting
+# 3. Enable static website hosting
 resource "aws_s3_bucket_website_configuration" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -32,7 +27,7 @@ resource "aws_s3_bucket_website_configuration" "portfolio" {
   }
 }
 
-# 5. Allow public access to website files
+# 4. Allow public reads of S3 objects
 resource "aws_s3_bucket_policy" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -65,7 +60,7 @@ resource "aws_s3_object" "image" {
   ]
 }
 
-# 6. Generate S3 image URL and update HTML
+# 6. Generate image URL and update HTML
 locals {
   portfolio_image_url = "https://${aws_s3_bucket.portfolio.bucket}.s3.ap-south-1.amazonaws.com/ankita.png"
 
@@ -88,7 +83,7 @@ resource "aws_s3_object" "index" {
   ]
 }
 
-# 8. Outputs
+# 8. Outputs - define each output only once
 output "portfolio_bucket_arn" {
   value = aws_s3_bucket.portfolio.arn
 }
@@ -100,6 +95,3 @@ output "portfolio_image_url" {
 output "portfolio_s3_website_url" {
   value = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
 }
-
-
-
