@@ -59,8 +59,8 @@ resource "aws_s3_object" "image" {
   bucket = aws_s3_bucket.portfolio.id
   key    = "ankita.png"
 
-  source = "${path.module}/portfolio/ankita.png"
-  etag   = filemd5("${path.module}/portfolio/ankita.png")
+ source = "${path.module}/portfolio/portfolio/ankita.png"
+etag   = filemd5("${path.module}/portfolio/portfolio/ankita.png")
 
   content_type = "image/png"
 
