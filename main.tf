@@ -2,7 +2,7 @@
 
 # 1. Create the S3 bucket for the portfolio website
 resource "aws_s3_bucket" "portfolio" {
-  bucket = "portn7494557"
+  bucket = "portn746ndjh58557"
 
   tags = {
     Name        = "AnkitaPortfolio"
